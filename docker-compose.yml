@@ -1,0 +1,62 @@
+version: "3"
+
+services:
+  sms-svc:
+    container_name: sms-svc
+    build:
+      context: .
+    image: "sms-svc:latest"
+    networks:
+      - sms-svc
+      - cache
+    depends_on:
+      - sms-db
+      - sms-cache
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_HOST: sms-db
+      DATABASE_PORT: "3306"
+      REDIS_HOST: sms-cache
+      REDIS_PORT: 6379
+
+  sms-db:
+    container_name: sms_mysql
+    image: mysql:5.7
+    # ports:
+    #     - "3406:3306"
+    expose:
+      - "3306"
+    networks:
+      - sms-svc
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD}
+      MYSQL_USER: ${DATABASE_USER}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD}
+      MYSQL_DATABASE: ${DATABASE_DB}
+    volumes:
+      - ./mysql-dump/data:/var/lib/mysql
+      - ./mysql-dump:/docker-entrypoint-initdb.d
+
+  sms-cache:
+    container_name: sms_cache
+    image: redis:6.0.8
+    # ports:
+    #   - "${REDIS_PORT}:6379"
+    networks:
+      - sms-svc
+      - cache
+    expose:
+      - "6379"
+    entrypoint: redis-server --appendonly yes
+    restart: "always"
+    volumes:
+      - ./redis-data:/data
+
+volumes:
+  mysql-dump:
+  redis-data:
+
+networks:
+  sms-svc:
+  cache:
